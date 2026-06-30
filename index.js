@@ -1,6 +1,8 @@
 const http = require("node:http");
 const fs = require("node:fs");
 const { formidable } = require("formidable"); // formidable v3 用 named import
+const { handleUpload } = require("./handleUpload.js");
+const { handleNotFound } = require("./handleNotFound.js");
 
 // ========== 任務一：讀取上傳設定 ==========
 /**
@@ -56,8 +58,9 @@ function getUploadConfig() {
 function getFileExtension(filename) {
   // TODO: 實作此函式
   // 提示：用 lastIndexOf('.') 找最後一個 .，toLowerCase() 轉小寫
+  console.log("檔案名稱:", filename);
   const lastDotIndex = filename.lastIndexOf(".");
-  if (lastDotIndex === -1) {
+  if (lastDotIndex <= 0) {
     console.log("檔案名稱錯誤，請檢查");
     return "";
   }
@@ -156,6 +159,11 @@ function router(req, res, config) {
   //     form.on('error', (err) => {
   //       console.log(err); // 記錄 log、清理暫存檔、額外監控可以寫在這邊
   //     });
+  if (req.method === "POST" && req.url === "/coaches/avatar") {
+    handleUpload(req, res, config);
+  } else {
+    handleNotFound(res);
+  }
 }
 
 // ========== 任務六：建立上傳 server ==========
@@ -177,6 +185,19 @@ function router(req, res, config) {
 function createUploadServer(config) {
   // TODO: 實作此函式
   // 提示：主邏輯都在 router 裡，這邊函式內容不多
+  const { uploadDir } = config;
+
+  // 檢測路徑是否存在，沒有則建立
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+
+  // 建立伺服器，分配路由
+  const server = http.createServer((req, res) => {
+    router(req, res, config);
+  });
+
+  return server;
 }
 
 module.exports = {
